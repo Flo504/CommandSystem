@@ -1,20 +1,25 @@
 package fr.flo504.commandsystem.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.brigadier.tree.RootCommandNode;
+import net.minecraft.server.v1_16_R1.CommandListenerWrapper;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.craftbukkit.v1_16_R1.CraftServer;
+import org.bukkit.craftbukkit.v1_16_R1.command.BukkitCommandWrapper;
+import org.bukkit.craftbukkit.v1_16_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class NewTabCompleter {
 
@@ -119,13 +124,11 @@ public class NewTabCompleter {
 
     private static void checkVersion(){
         if(version < 13){
-            try {
-                throw new IllegalAccessException("This method is only for minecraft 1.13 and more");
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
+            throw new RuntimeException(new IllegalAccessException("This method is only for minecraft 1.13 and more"));
         }
     }
+
+    /*
 
     public static void addCommand(Set<String> labels, PluginCommand command){
         System.out.println(labels);
@@ -161,10 +164,58 @@ public class NewTabCompleter {
             } catch (IllegalAccessException | InvocationTargetException ignored) {}
         }
     }
+     */
+
+    public static void addCommand(Set<String> labels, PluginCommand command){
+        final CraftServer server = (CraftServer) Bukkit.getServer();
+        final CommandDispatcher<CommandListenerWrapper> commandDispatcher = server.getHandle().getServer().dataPackResources.commandDispatcher.a();
+
+        for(String label : labels){
+            new BukkitCommandWrapper(server, command).register(commandDispatcher, label);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void removeCommands(Set<String> commands){
+        final CraftServer server = (CraftServer) Bukkit.getServer();
+        final CommandDispatcher<CommandListenerWrapper> commandDispatcher = server.getHandle().getServer().dataPackResources.commandDispatcher.a();
+        final RootCommandNode<?> rootCommandNode = commandDispatcher.getRoot();
+
+        try{
+            final Field childrenMapField = CommandNode.class.getDeclaredField("children");
+            final Field literalsMapField = CommandNode.class.getDeclaredField("literals");
+            final Field argumentsMapField = CommandNode.class.getDeclaredField("arguments");
+
+            childrenMapField.setAccessible(true);
+            literalsMapField.setAccessible(true);
+            argumentsMapField.setAccessible(true);
+
+            Map<String, CommandNode<?>> children = (Map<String, CommandNode<?>>) childrenMapField.get(rootCommandNode);
+            Map<String, LiteralCommandNode<?>> literals = (Map<String, LiteralCommandNode<?>>) literalsMapField.get(rootCommandNode);
+            Map<String, ArgumentCommandNode<?, ?>> arguments = (Map<String, ArgumentCommandNode<?, ?>>) argumentsMapField.get(rootCommandNode);
+
+            for(String command : commands){
+                children.remove(command);
+                literals.remove(command);
+                arguments.remove(command);
+            }
+        }catch (Exception ignored){}
+
+    }
+
+    public static void synchronize(){
+        final CraftServer server = (CraftServer) Bukkit.getServer();
+        final net.minecraft.server.v1_16_R1.CommandDispatcher commandDispatcher = server.getHandle().getServer().dataPackResources.commandDispatcher;
+
+        for(final Player player : Bukkit.getOnlinePlayers()){
+            final CraftPlayer craftPlayer = (CraftPlayer) player;
+            commandDispatcher.a(craftPlayer.getHandle());
+        }
+    }
 
     /**
      *
-     * Debug Method (not usefull at all)
+     * Debug Method (not useful at all)
      *
      */
     private static <T> void listCommand(Collection<CommandNode<T>> children){

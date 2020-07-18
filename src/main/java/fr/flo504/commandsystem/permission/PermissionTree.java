@@ -1,12 +1,7 @@
 package fr.flo504.commandsystem.permission;
 
-import org.bukkit.Bukkit;
-import org.bukkit.permissions.Permission;
-
-import javax.swing.text.html.Option;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class PermissionTree {
 
