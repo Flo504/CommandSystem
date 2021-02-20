@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>fr.flo504.commandsystem</groupId>
-    <artifactId>CommandSystem</artifactId>
+    <artifactId>commandsystem</artifactId>
     <version>1.7.0</version>
 
     <name>CommandSystem</name>
